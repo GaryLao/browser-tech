@@ -1,0 +1,12 @@
+# idea ignore
+.idea/
+.idea
+*.ipr
+*.iml
+*.iws
+
+# flatten ignore
+.flattened-pom.xml
+
+# license check result
+license-list
