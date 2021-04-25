@@ -1,7 +1,8 @@
 const net = require("net");
+const parser = require("./parser.js");
 
-class Request {
-    constructor(options) {
+class Request{
+    constructor(options){
         this.method = options.method || "GET";
         this.host = options.host;
         this.port = options.port || 80;
@@ -20,10 +21,15 @@ class Request {
         this.headers["Content-Length"] = this.bodyText.length;
     }
 
+    toString(){
+        return `${this.method} ${this.path} HTTP/1.1\r
+${Object.keys(this.headers).map(key => `${key}: ${this.headers[key]}`).join('\r\n')}\r
+\r
+${this.bodyText}`
+    }
+
     send(connection){
-        return new Promise((resolve, reject) => {
-            //...
-            // console.log("to send");
+        return new Promise(((resolve, reject) => {
             const parser = new ResponseParser;
             if (connection){
                 connection.write(this.toString());
@@ -32,32 +38,30 @@ class Request {
                     host: this.host,
                     port: this.port
                 }, () => {
+                    // console.log(this.toString());
                     connection.write(this.toString());
                 })
             }
             connection.on('data', (data) => {
-                console.log(data.toString());
                 parser.receive(data.toString());
+                // resolve(data.toString());
                 if (parser.isFinished){
                     resolve(parser.response);
-                    connection.end();
                 }
+                // console.log(parser.statusLine);
+                // console.log(parser.headers);
+                connection.end();
             });
-            connection.on('error', (err) => {
+            connection.on('error', (err)=>{
                 reject(err);
                 connection.end();
-            })
-
-            // resolve("finish");
-        });
+            });
+        }));
     }
+}
 
-    toString(){
-        return `${this.method} ${this.path} HTTP/1.1\r
-${Object.keys(this.headers).map(key => `${key}: ${this.headers[key]}`).join('\r\n')}\r
-\r
-${this.bodyText}`;
-    }
+class Response{
+
 }
 
 class ResponseParser {
@@ -189,21 +193,28 @@ class TrunkedBodyParser{
     }
 }
 
+// process.on('unhandledRejection', (reason, p) => {
+//     console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
+//     // application specific logging, throwing an error, or other logic here
+// });
+
 void async function (){
     let request = new Request({
-       method: "POST",
-       host: "127.0.0.1",
-       port: "8088",
-       path: "/",
-       headers: {
-           ["X-Foo2"]: "customed"
-       },
-       body:{
-           name: "Gary"
-       }
+        method: "POST",
+        host: "127.0.0.1",
+        port: "8088",
+        path: "/",
+        headers: {
+            ["X-Foo2"]: "customed"
+        },
+        body:{
+            name: "Gary"
+        }
     });
 
     let response = await request.send();
 
-    console.log(response);
+    let dom = parser.parseHTML(response.body);
+
+    console.log(dom);
 }();
